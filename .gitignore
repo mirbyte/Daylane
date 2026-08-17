@@ -37,11 +37,13 @@ _ReSharper*/
 [Tt]est[Rr]esult*/
 *.trx
 *.received.*
-.publish - Shortcut.lnk
+*.lnk
 
 *.db
 *.db-shm
 *.db-wal
 *.db-journal
+*.sqlite
+*.sqlite3
 backup/
 sketch/
