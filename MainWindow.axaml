@@ -1,0 +1,817 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Daylane.ViewModels"
+        xmlns:controls="using:Daylane.Controls"
+        mc:Ignorable="d"
+        d:DesignWidth="1400"
+        d:DesignHeight="860"
+        x:Class="Daylane.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/app-icon.ico"
+        Title="Daylane"
+        Width="1400"
+        Height="860"
+        MinWidth="1100"
+        MinHeight="680"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="72,*">
+        <Border Background="White"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="16,0">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
+                    <TextBlock Text="Daylane"
+                               Classes="brand"
+                               VerticalAlignment="Center" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <Button Classes="tab"
+                                Content="Day"
+                                Command="{Binding SelectDayCommand}"
+                                Classes.active="{Binding IsDaySelected}" />
+                        <Button Classes="tab"
+                                Content="Insights"
+                                Command="{Binding SelectInsightsCommand}"
+                                Classes.active="{Binding IsInsightsSelected}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsDaySelected}">
+                        <Button x:Name="DayPickerButton"
+                                Classes="date-picker"
+                                VerticalAlignment="Center">
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <Calendar SelectedDate="{Binding SelectedDay, Mode=TwoWay}"
+                                              SelectedDatesChanged="OnDayCalendarSelectedDatesChanged" />
+                                </Flyout>
+                            </Button.Flyout>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Path Width="14"
+                                      Height="14"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Center"
+                                      Fill="{DynamicResource AppMutedBrush}"
+                                      Data="M4,2 V4 H2.5 A1.5,1.5,0,0,0,1,5.5 V13.5 A1.5,1.5,0,0,0,2.5,15 H13.5 A1.5,1.5,0,0,0,15,13.5 V5.5 A1.5,1.5,0,0,0,13.5,4 H12 V2 H10.5 V4 H5.5 V2 Z M2.5,6.5 H13.5 V13.5 H2.5 Z" />
+                                <TextBlock Text="{Binding DayLabel}"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           VerticalAlignment="Center"
+                                           MinWidth="120" />
+                                <Path Width="10"
+                                      Height="6"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Center"
+                                      Fill="{DynamicResource AppMutedBrush}"
+                                      Data="M1,1 L5,5 L9,1" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="date-nav"
+                                Command="{Binding PreviousDayCommand}"
+                                ToolTip.Tip="Previous day"
+                                Content="‹" />
+                        <Button Classes="date-nav"
+                                Command="{Binding NextDayCommand}"
+                                IsEnabled="{Binding CanGoNextDay}"
+                                ToolTip.Tip="Next day"
+                                Content="›" />
+                        <Button Classes="secondary"
+                                Content="Today"
+                                Command="{Binding SelectTodayCommand}"
+                                IsVisible="{Binding !IsSelectedDayToday}"
+                                MinHeight="34"
+                                Padding="12,7" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsInsightsSelected}">
+                        <Border x:Name="PeriodSegmentGroup" Classes="segment-group">
+                            <Panel>
+                                <Border x:Name="PeriodThumb"
+                                        Classes="segment-thumb"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        IsHitTestVisible="False" />
+                                <StackPanel Orientation="Horizontal" Spacing="0">
+                                    <Button x:Name="WeekPeriodButton"
+                                            Classes="segment"
+                                            Content="Week"
+                                            Command="{Binding SelectWeekPeriodCommand}"
+                                            Classes.active="{Binding IsWeekPeriod}" />
+                                    <Button x:Name="MonthPeriodButton"
+                                            Classes="segment"
+                                            Content="Month"
+                                            Command="{Binding SelectMonthPeriodCommand}"
+                                            Classes.active="{Binding IsMonthPeriod}" />
+                                </StackPanel>
+                            </Panel>
+                        </Border>
+                        <Border Classes="date-picker"
+                                Padding="12,7"
+                                Margin="4,0,0,0"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PeriodLabel}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       VerticalAlignment="Center"
+                                       MinWidth="168" />
+                        </Border>
+                        <Button Classes="date-nav"
+                                Command="{Binding PreviousPeriodCommand}"
+                                ToolTip.Tip="Previous period"
+                                Content="‹" />
+                        <Button Classes="date-nav"
+                                Command="{Binding NextPeriodCommand}"
+                                IsEnabled="{Binding CanGoNextPeriod}"
+                                ToolTip.Tip="Next period"
+                                Content="›" />
+                        <Button Classes="secondary"
+                                Content="Current"
+                                Command="{Binding SelectCurrentPeriodCommand}"
+                                IsVisible="{Binding CanGoNextPeriod}"
+                                MinHeight="34"
+                                Padding="12,7" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                    <Border Classes="status-live" IsVisible="{Binding IsRunning}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource AppAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Live"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppAccentBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="status-idle" IsVisible="{Binding !IsRunning}">
+                        <TextBlock Text="Stopped" FontSize="12" FontWeight="SemiBold" Classes="muted" />
+                    </Border>
+                    <Button Classes="date-nav"
+                            ToolTip.Tip="More">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Header="Open data folder"
+                                          Command="{Binding OpenDataFolderCommand}" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                        <TextBlock Text="···"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Day -->
+        <Grid Grid.Row="1" IsVisible="{Binding IsDaySelected}" Margin="16" RowDefinitions="Auto,Auto,*" RowSpacing="12">
+            <Border Classes="panel" Padding="0" MinHeight="230">
+                <Grid>
+                    <Grid ColumnDefinitions="148,*"
+                          IsVisible="{Binding HasDayActivity}">
+                            <Grid RowDefinitions="26,72,63,63">
+                                <Border Background="{DynamicResource AppSurfaceAltBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="0,0,1,1" />
+                                <Border Grid.Row="1"
+                                        Background="{DynamicResource AppSurfaceAltBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="0,0,1,1"
+                                        Padding="16,0">
+                                    <TextBlock Text="Applications" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+                                </Border>
+                                <Border Grid.Row="2"
+                                        Background="{DynamicResource AppSurfaceAltBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="0,0,1,1"
+                                        Padding="16,0">
+                                    <StackPanel Spacing="4" VerticalAlignment="Center">
+                                        <TextBlock Text="Active / Away" FontSize="12" FontWeight="Medium" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <Border Classes="legend-swatch" Background="#2F9E6B" />
+                                                <TextBlock Classes="legend-label" Text="Active" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <controls:AwayFill Width="8" Height="8" CornerRadius="2" />
+                                                <TextBlock Classes="legend-label" Text="Away" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="3"
+                                        Background="{DynamicResource AppSurfaceAltBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="0,0,1,0"
+                                        Padding="16,0">
+                                    <StackPanel Spacing="4" VerticalAlignment="Center"
+                                                ToolTip.Tip="Keys and clicks per minute while Active">
+                                        <TextBlock Text="Input" FontSize="12" FontWeight="Medium" />
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Border Classes="legend-swatch" Background="#322F9E6B" />
+                                            <Border Classes="legend-swatch" Background="#872F9E6B" />
+                                            <Border Classes="legend-swatch" Background="#DC2F9E6B" />
+                                            <TextBlock Classes="legend-label" Margin="2,0,0,0" Text="Light → heavy" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <ScrollViewer x:Name="TimelineScroll"
+                                          Grid.Column="1"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          Focusable="True">
+                                <controls:TimelineZoomSurface x:Name="TimelineZoomSurface"
+                                                              Zoom="{Binding TimelineZoom}">
+                                    <Grid RowDefinitions="26,72,63,63" Background="White">
+                                        <Border Background="{DynamicResource AppSurfaceAltBrush}"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="0,0,0,1">
+                                            <controls:TimelineRuler Height="26" />
+                                        </Border>
+                                        <Border Grid.Row="1"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="0,0,0,1"
+                                                Height="72">
+                                            <controls:TimelineLane Height="72"
+                                                                   Mode="Applications"
+                                                                   Segments="{Binding TimelineSegments}"
+                                                                   DayStartLocal="{Binding SelectedDay}"
+                                                                   SelectedSegmentId="{Binding SelectedSegmentId, Mode=TwoWay}" />
+                                        </Border>
+                                        <Border Grid.Row="2"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="0,0,0,1"
+                                                Height="63">
+                                            <controls:TimelineLane Height="63"
+                                                                   Mode="Computer"
+                                                                   Segments="{Binding TimelineSegments}"
+                                                                   DayStartLocal="{Binding SelectedDay}"
+                                                                   SelectedSegmentId="{Binding SelectedSegmentId, Mode=TwoWay}" />
+                                        </Border>
+                                        <Border Grid.Row="3" Height="63">
+                                            <controls:TimelineLane Height="63"
+                                                                   Mode="Activity"
+                                                                   Segments="{Binding TimelineSegments}"
+                                                                   DayStartLocal="{Binding SelectedDay}"
+                                                                   SelectedSegmentId="{Binding SelectedSegmentId, Mode=TwoWay}" />
+                                        </Border>
+                                    </Grid>
+                                </controls:TimelineZoomSurface>
+                            </ScrollViewer>
+                    </Grid>
+
+                    <StackPanel Spacing="6"
+                                Margin="24"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                IsVisible="{Binding !HasDayActivity}">
+                        <TextBlock Classes="empty-title" Text="No tracked activity" />
+                        <TextBlock Classes="empty-body" Text="Nothing was recorded for this day yet." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" ColumnDefinitions="*,12,*">
+                <Border Classes="panel" Padding="18" MinHeight="112">
+                    <Grid>
+                        <StackPanel Spacing="12" IsVisible="{Binding HasSelectedSegment}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Selection" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Grid.Column="1"
+                                        Classes="secondary"
+                                        Content="Clear"
+                                        Padding="10,4"
+                                        MinHeight="28"
+                                        FontSize="12"
+                                        Command="{Binding ClearSelectionCommand}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <Panel Width="28" Height="28" VerticalAlignment="Top">
+                                    <controls:AwayFill Width="28" Height="28" CornerRadius="4"
+                                                       IsVisible="{Binding SelectedDetailIsAway}" />
+                                    <Panel IsVisible="{Binding !SelectedDetailIsAway}">
+                                        <Border Width="28" Height="28" CornerRadius="4"
+                                                Background="{Binding SelectedDetailColor}"
+                                                IsVisible="{Binding !HasSelectedDetailIcon}" />
+                                        <Image Width="28" Height="28"
+                                               Source="{Binding SelectedDetailIcon}"
+                                               IsVisible="{Binding HasSelectedDetailIcon}" />
+                                    </Panel>
+                                </Panel>
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock Text="{Binding SelectedDetailTitle}"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="muted"
+                                               FontSize="12"
+                                               Text="{Binding SelectedDetailRangeText}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="14">
+                                        <TextBlock FontSize="12" FontWeight="SemiBold"
+                                                   Text="{Binding SelectedDetailDurationText}" />
+                                        <TextBlock Classes="muted" FontSize="12"
+                                                   Text="{Binding SelectedDetailShareText}" />
+                                        <TextBlock Classes="muted" FontSize="12"
+                                                   IsVisible="{Binding !SelectedDetailIsAway}"
+                                                   Text="{Binding SelectedDetailKeysText, StringFormat='Keys {0}'}" />
+                                        <TextBlock Classes="muted" FontSize="12"
+                                                   IsVisible="{Binding !SelectedDetailIsAway}"
+                                                   Text="{Binding SelectedDetailClicksText, StringFormat='Clicks {0}'}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel Spacing="6"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    IsVisible="{Binding !HasSelectedSegment}">
+                            <TextBlock Classes="empty-title" Text="No selection" />
+                            <TextBlock Classes="empty-body" Text="Click a timeline block or activity row to inspect it." />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="2" Classes="panel" Padding="18" MinHeight="112">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Focus" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Classes="muted" FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding PeakHourText}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="muted" FontSize="11" Text="Longest Active" />
+                                <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding FocusLongestText}" />
+                                <TextBlock Classes="muted" FontSize="11" Text="{Binding FocusLongestDetailText}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="muted" FontSize="11" Text="App sessions" />
+                                <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding FocusSessionCountText}" />
+                                <TextBlock Classes="muted" FontSize="11" Text="Foreground stretches" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Classes="muted" FontSize="11" Text="Away spans" />
+                                <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding FocusAwayCountText}" />
+                                <TextBlock Classes="muted" FontSize="11" Text="Idle interruptions" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="muted"
+                                   FontSize="12"
+                                   Text="{Binding FocusLastAwayText}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="2" ColumnDefinitions="0.9*,12,1.25*,12,0.55*" ColumnSpacing="0">
+                <Border Classes="panel" Padding="0">
+                    <Grid RowDefinitions="40,*">
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="16,0"
+                                Background="{DynamicResource AppSurfaceAltBrush}">
+                            <Grid ColumnDefinitions="*,90,90,80">
+                                <TextBlock Text="Activity" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Start" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="End" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Duration" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Panel Grid.Row="1">
+                            <ListBox x:Name="SegmentList"
+                                     Classes="plain-list"
+                                     ItemsSource="{Binding SegmentItems}"
+                                     SelectedItem="{Binding SelectedSegmentItem}"
+                                     SelectionChanged="OnSegmentSelectionChanged"
+                                     IsVisible="{Binding HasSegments}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ActivitySegmentItemViewModel">
+                                        <Border Classes="app-row"
+                                                Padding="12,8"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="0,0,0,1">
+                                            <Grid ColumnDefinitions="*,90,90,80">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                                        <controls:AwayFill Width="16" Height="16" CornerRadius="2"
+                                                                           IsVisible="{Binding IsIdle}" />
+                                                        <Panel IsVisible="{Binding !IsIdle}">
+                                                            <Border Width="16" Height="16" CornerRadius="2"
+                                                                    Background="{Binding Color}"
+                                                                    IsVisible="{Binding !HasIcon}" />
+                                                            <Image Width="16" Height="16"
+                                                                   Source="{Binding Icon}"
+                                                                   IsVisible="{Binding HasIcon}" />
+                                                        </Panel>
+                                                    </Panel>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="13"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding StartText}" Classes="muted"
+                                                           FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding EndText}" Classes="muted"
+                                                           FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding DurationText}"
+                                                           FontSize="12"
+                                                           HorizontalAlignment="Right"
+                                                           VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Spacing="6"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding !HasSegments}">
+                                <TextBlock Classes="empty-title" Text="No sessions" />
+                                <TextBlock Classes="empty-body" Text="App switches and Away spans will show up here." />
+                            </StackPanel>
+                        </Panel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="2" Classes="panel" Padding="0">
+                    <Grid RowDefinitions="40,*,36">
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="16,0"
+                                Background="{DynamicResource AppSurfaceAltBrush}">
+                            <Grid ColumnDefinitions="*,140,76,60,60" ColumnSpacing="18">
+                                <TextBlock Text="Apps" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Share" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Duration" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Keys" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Clicks" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Panel Grid.Row="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasAppUsage}">
+                                <ItemsControl ItemsSource="{Binding AppUsage}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AppUsageItemViewModel">
+                                            <Border Classes="app-row"
+                                                    Padding="16,8"
+                                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                                    BorderThickness="0,0,0,1"
+                                                    ToolTip.Tip="{Binding DisplayName}">
+                                                <Grid ColumnDefinitions="*,140,76,60,60" ColumnSpacing="18">
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                                            <controls:AwayFill Width="16" Height="16" CornerRadius="2"
+                                                                               IsVisible="{Binding IsIdle}" />
+                                                            <Panel IsVisible="{Binding !IsIdle}">
+                                                                <Border Width="16" Height="16" CornerRadius="2"
+                                                                        Background="{Binding Color}"
+                                                                        IsVisible="{Binding !HasIcon}" />
+                                                                <Image Width="16" Height="16"
+                                                                       Source="{Binding Icon}"
+                                                                       IsVisible="{Binding HasIcon}" />
+                                                            </Panel>
+                                                        </Panel>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   FontSize="13"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <Grid Grid.Column="1"
+                                                          ColumnDefinitions="*,48"
+                                                          ColumnSpacing="8"
+                                                          VerticalAlignment="Center">
+                                                        <Border Height="10" CornerRadius="2" ClipToBounds="True"
+                                                                HorizontalAlignment="Stretch">
+                                                            <Panel HorizontalAlignment="Left">
+                                                                <Border Height="10"
+                                                                        Width="{Binding BarWidth}"
+                                                                        CornerRadius="2"
+                                                                        Background="{Binding Color}"
+                                                                        IsVisible="{Binding !IsIdle}" />
+                                                                <controls:AwayFill Height="10"
+                                                                                   Width="{Binding BarWidth}"
+                                                                                   CornerRadius="2"
+                                                                                   IsVisible="{Binding IsIdle}" />
+                                                            </Panel>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding PercentageText}"
+                                                                   FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   HorizontalAlignment="Right" />
+                                                    </Grid>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding DurationText}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center"
+                                                               HorizontalAlignment="Right" />
+                                                    <TextBlock Grid.Column="3"
+                                                               Text="{Binding KeyText}"
+                                                               Classes="muted"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               HorizontalAlignment="Right" />
+                                                    <TextBlock Grid.Column="4"
+                                                               Text="{Binding ClickText}"
+                                                               Classes="muted"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               HorizontalAlignment="Right" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <StackPanel Spacing="6"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding !HasAppUsage}">
+                                <TextBlock Classes="empty-title" Text="No apps" />
+                                <TextBlock Classes="empty-body" Text="Usage breakdown appears once tracking has data." />
+                            </StackPanel>
+                        </Panel>
+                        <Border Grid.Row="2"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="0,1,0,0"
+                                Padding="16,0"
+                                Background="{DynamicResource AppSurfaceAltBrush}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                                    <TextBlock Classes="muted" FontSize="12"
+                                               Text="{Binding ActiveDurationText, StringFormat='Active {0}'}"
+                                               ToolTip.Tip="Time using apps" />
+                                    <TextBlock Classes="muted" FontSize="12"
+                                               Text="{Binding IdleDurationText, StringFormat='Away {0}'}"
+                                               ToolTip.Tip="No keyboard or mouse input" />
+                                    <TextBlock Classes="muted" FontSize="12"
+                                               Text="{Binding KeyPressCount, StringFormat='Keys {0}'}" />
+                                    <TextBlock Classes="muted" FontSize="12"
+                                               Text="{Binding MouseClickCount, StringFormat='Clicks {0}'}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding ScreenTimeText, StringFormat='Tracked {0}'}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           ToolTip.Tip="Active + Away" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="4" Classes="panel" Padding="0">
+                    <Grid RowDefinitions="40,*">
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="16,0"
+                                Background="{DynamicResource AppSurfaceAltBrush}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Open" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           ToolTip.Tip="Apps with a visible window, including unfocused" />
+                                <TextBlock Grid.Column="1" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Time" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Panel Grid.Row="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasOpenApps}">
+                                <ItemsControl ItemsSource="{Binding OpenApps}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:OpenAppItemViewModel">
+                                            <Border Classes="app-row"
+                                                    Padding="12,8"
+                                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                                    BorderThickness="0,0,0,1"
+                                                    ToolTip.Tip="{Binding DisplayName}">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                                            <Border Width="16" Height="16" CornerRadius="2"
+                                                                    Background="{Binding Color}"
+                                                                    IsVisible="{Binding !HasIcon}" />
+                                                            <Image Width="16" Height="16"
+                                                                   Source="{Binding Icon}"
+                                                                   IsVisible="{Binding HasIcon}" />
+                                                        </Panel>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   FontSize="13"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding OpenDurationText}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <StackPanel Spacing="6"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding !HasOpenApps}">
+                                <TextBlock Classes="empty-title" Text="None open" />
+                                <TextBlock Classes="empty-body" Text="Visible windows will appear here." />
+                            </StackPanel>
+                        </Panel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Insights -->
+        <ScrollViewer Grid.Row="1"
+                      Margin="16"
+                      IsVisible="{Binding IsInsightsSelected}"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+                <Grid ColumnDefinitions="1.35*,*,*,0.9*,0.9*" ColumnSpacing="12">
+                    <Border Classes="panel-accent" Padding="18" ToolTip.Tip="Time using apps">
+                        <StackPanel Spacing="6">
+                            <TextBlock FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppAccentBrush}"
+                                       Text="Active" />
+                            <TextBlock Text="{Binding InsightActiveDurationText}"
+                                       FontSize="28"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AppTextBrush}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="panel" Padding="18" ToolTip.Tip="Active + Away">
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="muted" FontSize="12" Text="Tracked" />
+                            <TextBlock Text="{Binding InsightScreenTimeText}" FontSize="22" FontWeight="Bold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="panel" Padding="18" ToolTip.Tip="No keyboard or mouse input">
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="muted" FontSize="12" Text="Away" />
+                            <TextBlock Text="{Binding InsightIdleDurationText}" FontSize="22" FontWeight="Bold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="panel" Padding="18">
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="muted" FontSize="12" Text="Keys" />
+                            <TextBlock Text="{Binding InsightKeyPressCount}"
+                                       Classes="muted"
+                                       FontSize="18"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Classes="panel" Padding="18">
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="muted" FontSize="12" Text="Clicks" />
+                            <TextBlock Text="{Binding InsightMouseClickCount}"
+                                       Classes="muted"
+                                       FontSize="18"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border Classes="panel" Padding="18">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBlock Text="Daily active"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       ToolTip.Tip="Active minutes per day (excludes Away)" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="muted"
+                                       FontSize="12"
+                                       Margin="0,0,16,0"
+                                       Text="{Binding InsightAvgActiveText, StringFormat='Avg {0}/day'}" />
+                            <TextBlock Grid.Column="2" Classes="muted" FontSize="12" Text="{Binding InsightPeakDayText}" />
+                        </Grid>
+                        <controls:HourlyChart Height="160"
+                                              Values="{Binding InsightDailyValues}"
+                                              Labels="{Binding InsightDailyLabels}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="panel" Padding="0">
+                    <Grid RowDefinitions="40,*" MinHeight="120">
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="16,0"
+                                Background="{DynamicResource AppSurfaceAltBrush}">
+                            <Grid ColumnDefinitions="*,120,80,80,80">
+                                <TextBlock Text="Top apps" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Share" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Duration" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Keys" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                           Text="Clicks" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Panel Grid.Row="1">
+                            <ItemsControl ItemsSource="{Binding InsightAppUsage}" IsVisible="{Binding HasInsightAppUsage}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AppUsageItemViewModel">
+                                        <Border Classes="app-row"
+                                                Padding="16,10"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="0,0,0,1">
+                                            <Grid ColumnDefinitions="*,120,80,80,80">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                                        <controls:AwayFill Width="16" Height="16" CornerRadius="2"
+                                                                           IsVisible="{Binding IsIdle}" />
+                                                        <Panel IsVisible="{Binding !IsIdle}">
+                                                            <Border Width="16" Height="16" CornerRadius="2"
+                                                                    Background="{Binding Color}"
+                                                                    IsVisible="{Binding !HasIcon}" />
+                                                            <Image Width="16" Height="16"
+                                                                   Source="{Binding Icon}"
+                                                                   IsVisible="{Binding HasIcon}" />
+                                                        </Panel>
+                                                    </Panel>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="13"
+                                                               FontWeight="Medium"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal"
+                                                            Spacing="6"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center">
+                                                    <Border Height="10"
+                                                            Width="{Binding BarWidth}"
+                                                            CornerRadius="2"
+                                                            Background="{Binding Color}"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding !IsIdle}" />
+                                                    <controls:AwayFill Height="10"
+                                                                       Width="{Binding BarWidth}"
+                                                                       CornerRadius="2"
+                                                                       VerticalAlignment="Center"
+                                                                       IsVisible="{Binding IsIdle}" />
+                                                    <TextBlock Text="{Binding PercentageText}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="{Binding DurationText}"
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding KeyText}" Classes="muted"
+                                                           FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="4" Text="{Binding ClickText}" Classes="muted"
+                                                           FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Spacing="6"
+                                        Margin="24"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding !HasInsightAppUsage}">
+                                <TextBlock Classes="empty-title" Text="No app usage" />
+                                <TextBlock Classes="empty-body" Text="Nothing to summarize for this period yet." />
+                            </StackPanel>
+                        </Panel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

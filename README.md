@@ -1,0 +1,37 @@
+# Daylane
+
+Windows activity tracker. Records which apps you used, when you were away, and how much you typed or clicked. Everything stays on disk next to the exe. No accounts, no cloud.
+
+Windows 10/11 x64. Binaries: [Releases](../../releases). Unzip and run `Daylane.exe`.
+
+## Features
+
+- Day timeline: foreground apps, Active/Away, input intensity
+- Week and month insights
+- Open-app time (visible windows, not only focus)
+- Tray icon; optional Start with Windows
+
+## Data and privacy
+
+`daylane.db` is created beside the executable (portable). Stored: process name, exe path, time ranges, key/click **counts**. Not stored: keystrokes, window titles, screenshots, or mouse coordinates.
+
+Menu → Open data folder.
+
+## Config
+
+`config.ini` next to the exe:
+
+```ini
+[settings]
+threshold_minutes=5
+```
+
+Minutes without keyboard or mouse input before a span is marked Away (1–240). Restart after edits.
+
+## Build
+
+[.NET 10 SDK](https://dotnet.microsoft.com/download). Release publish is a self-contained `win-x64` single file:
+
+```powershell
+dotnet publish -c Release
+```
