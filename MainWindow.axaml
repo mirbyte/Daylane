@@ -457,7 +457,7 @@
                 </Border>
 
                 <Border Grid.Column="2" Classes="panel" Padding="0">
-                    <Grid RowDefinitions="40,*,36">
+                    <Grid RowDefinitions="40,*,45">
                         <Border BorderBrush="{DynamicResource AppBorderBrush}"
                                 BorderThickness="0,0,0,1"
                                 Padding="16,0"
@@ -562,24 +562,24 @@
                         <Border Grid.Row="2"
                                 BorderBrush="{DynamicResource AppBorderBrush}"
                                 BorderThickness="0,1,0,0"
-                                Padding="16,0"
+                                Padding="16,7"
                                 Background="{DynamicResource AppSurfaceAltBrush}">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                                <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                                    <TextBlock Classes="muted" FontSize="12"
+                                <StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
+                                    <TextBlock Classes="muted" FontSize="13" FontWeight="Medium"
                                                Text="{Binding ActiveDurationText, StringFormat='Active {0}'}"
                                                ToolTip.Tip="Time using apps" />
-                                    <TextBlock Classes="muted" FontSize="12"
+                                    <TextBlock Classes="muted" FontSize="13" FontWeight="Medium"
                                                Text="{Binding IdleDurationText, StringFormat='Away {0}'}"
                                                ToolTip.Tip="No keyboard or mouse input" />
-                                    <TextBlock Classes="muted" FontSize="12"
+                                    <TextBlock Classes="muted" FontSize="13" FontWeight="Medium"
                                                Text="{Binding KeyPressCount, StringFormat='Keys {0}'}" />
-                                    <TextBlock Classes="muted" FontSize="12"
+                                    <TextBlock Classes="muted" FontSize="13" FontWeight="Medium"
                                                Text="{Binding MouseClickCount, StringFormat='Clicks {0}'}" />
                                 </StackPanel>
                                 <TextBlock Grid.Column="1"
                                            Text="{Binding ScreenTimeText, StringFormat='Tracked {0}'}"
-                                           FontSize="12"
+                                           FontSize="15"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Right"
                                            VerticalAlignment="Center"

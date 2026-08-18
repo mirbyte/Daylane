@@ -9,6 +9,7 @@
     <AssemblyName>Daylane</AssemblyName>
     <RootNamespace>Daylane</RootNamespace>
     <Version>1.0.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <DefaultItemExcludes>$(DefaultItemExcludes);backup\**</DefaultItemExcludes>
