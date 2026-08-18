@@ -7,7 +7,7 @@ Windows 10/11 x64. Binaries: [Releases](../../releases). Unzip and run `Daylane.
 ## Features
 
 - Day timeline: foreground apps, Active/Away, input intensity
-- Week and month insights
+- Week and month insights. Month can take several seconds to open, longer on slower machines.
 - Open-app time (visible windows, not only focus)
 - Tray icon; optional Start with Windows
 
