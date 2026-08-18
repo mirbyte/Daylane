@@ -35,3 +35,8 @@ Minutes without keyboard or mouse input before a span is marked Away (1–240). 
 ```powershell
 dotnet publish -c Release
 ```
+
+---
+
+<img width="3839" height="2017" alt="maintab" src="https://github.com/user-attachments/assets/c82a0f46-52f0-4cae-8244-5762a1746e2c" />
+
