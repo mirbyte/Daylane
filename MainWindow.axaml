@@ -563,7 +563,7 @@
                                 BorderBrush="{DynamicResource AppBorderBrush}"
                                 BorderThickness="0,1,0,0"
                                 Padding="16,7"
-                                Background="{DynamicResource AppSurfaceAltBrush}">
+                                Background="#F3F4F6">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
                                     <TextBlock Classes="muted" FontSize="13" FontWeight="Medium"
