@@ -105,8 +105,7 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="Border.segment-thumb">
-            <Setter Property="Background" Value="White" />
+        <Style Selector="Border.segment-thumb, Border.tab-thumb">
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="RenderTransformOrigin" Value="0,0" />
             <Setter Property="RenderTransform" Value="translateX(0px)" />
@@ -119,12 +118,20 @@
             </Setter>
         </Style>
 
+        <Style Selector="Border.segment-thumb">
+            <Setter Property="Background" Value="White" />
+        </Style>
+
+        <Style Selector="Border.tab-thumb">
+            <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
+        </Style>
+
         <!-- Smooth hover/press for custom buttons (Fluent paints ContentPresenter directly). -->
         <Style Selector="Button.tab, Button.segment, Button.date-picker, Button.date-nav, Button.secondary">
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
-        <Style Selector="Button.tab, Button.date-picker, Button.date-nav, Button.secondary">
+        <Style Selector="Button.date-picker, Button.date-nav, Button.secondary">
             <Setter Property="RenderTransform" Value="scale(1)" />
             <Setter Property="Transitions">
                 <Transitions>
@@ -133,7 +140,7 @@
             </Setter>
         </Style>
 
-        <Style Selector="Button.tab:pressed, Button.date-picker:pressed, Button.date-nav:pressed, Button.secondary:pressed">
+        <Style Selector="Button.date-picker:pressed, Button.date-nav:pressed, Button.secondary:pressed">
             <Setter Property="RenderTransform" Value="scale(0.97)" />
         </Style>
 
@@ -167,12 +174,11 @@
         </Style>
 
         <Style Selector="Button.tab.active">
-            <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
         </Style>
 
         <Style Selector="Button.tab.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#DCF5E8" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
         </Style>
 

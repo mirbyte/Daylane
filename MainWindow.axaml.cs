@@ -1,5 +1,6 @@
 using System.Globalization;
 using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Transformation;
@@ -23,6 +24,9 @@ public partial class MainWindow : Window
     private double _periodThumbX = double.NaN;
     private double _periodThumbW;
     private double _periodThumbH;
+    private double _tabThumbX = double.NaN;
+    private double _tabThumbW;
+    private double _tabThumbH;
 
     public MainWindow()
     {
@@ -32,6 +36,7 @@ public partial class MainWindow : Window
         Opened += (_, _) => ScrollTimelineToNow();
         TimelineScroll.SizeChanged += OnTimelineScrollSizeChanged;
         PeriodSegmentGroup.LayoutUpdated += (_, _) => SyncPeriodThumb();
+        TabSegmentGroup.LayoutUpdated += (_, _) => SyncTabThumb();
 
         // Attach to content only so the ScrollViewer scrollbar keeps working.
         TimelineZoomSurface.AddHandler(PointerWheelChangedEvent, OnTimelinePointerWheel, handledEventsToo: true);
@@ -112,8 +117,18 @@ public partial class MainWindow : Window
         else if (e.PropertyName is nameof(MainWindowViewModel.InsightPeriodKind)
                  or nameof(MainWindowViewModel.IsInsightsSelected))
         {
-            Dispatcher.UIThread.Post(SyncPeriodThumb, DispatcherPriority.Loaded);
+            Dispatcher.UIThread.Post(() =>
+            {
+                SyncTabThumb();
+                SyncPeriodThumb();
+            }, DispatcherPriority.Loaded);
         }
+    }
+
+    private void SyncTabThumb()
+    {
+        Button? target = _boundVm?.IsInsightsSelected == true ? InsightsTabButton : DayTabButton;
+        SyncThumb(TabThumb, target, ref _tabThumbX, ref _tabThumbW, ref _tabThumbH);
     }
 
     private void SyncPeriodThumb()
@@ -124,12 +139,22 @@ public partial class MainWindow : Window
         }
 
         Button? target = _boundVm?.IsMonthPeriod == true ? MonthPeriodButton : WeekPeriodButton;
+        SyncThumb(PeriodThumb, target, ref _periodThumbX, ref _periodThumbW, ref _periodThumbH);
+    }
+
+    private static void SyncThumb(
+        Border thumb,
+        Button? target,
+        ref double lastX,
+        ref double lastW,
+        ref double lastH)
+    {
         if (target is null || target.Bounds.Width <= 0 || target.Bounds.Height <= 0)
         {
             return;
         }
 
-        if (PeriodThumb.Parent is not Visual host)
+        if (thumb.Parent is not Visual host)
         {
             return;
         }
@@ -139,21 +164,34 @@ public partial class MainWindow : Window
         double w = target.Bounds.Width;
         double h = target.Bounds.Height;
 
-        if (!double.IsNaN(_periodThumbX)
-            && Math.Abs(_periodThumbX - x) < 0.5
-            && Math.Abs(_periodThumbW - w) < 0.5
-            && Math.Abs(_periodThumbH - h) < 0.5)
+        if (!double.IsNaN(lastX)
+            && Math.Abs(lastX - x) < 0.5
+            && Math.Abs(lastW - w) < 0.5
+            && Math.Abs(lastH - h) < 0.5)
         {
             return;
         }
 
-        _periodThumbX = x;
-        _periodThumbW = w;
-        _periodThumbH = h;
-        PeriodThumb.Width = w;
-        PeriodThumb.Height = h;
-        PeriodThumb.RenderTransform = TransformOperations.Parse(
+        bool first = double.IsNaN(lastX);
+        Transitions? saved = null;
+        if (first)
+        {
+            saved = thumb.Transitions;
+            thumb.Transitions = null;
+        }
+
+        lastX = x;
+        lastW = w;
+        lastH = h;
+        thumb.Width = w;
+        thumb.Height = h;
+        thumb.RenderTransform = TransformOperations.Parse(
             string.Create(CultureInfo.InvariantCulture, $"translate({x}px, {origin.Y}px)"));
+
+        if (first)
+        {
+            thumb.Transitions = saved;
+        }
     }
 
     private void OnTimelinePointerWheel(object? sender, PointerWheelEventArgs e)

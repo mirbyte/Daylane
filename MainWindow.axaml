@@ -29,16 +29,27 @@
                                Classes="brand"
                                VerticalAlignment="Center" />
 
-                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <Button Classes="tab"
-                                Content="Day"
-                                Command="{Binding SelectDayCommand}"
-                                Classes.active="{Binding IsDaySelected}" />
-                        <Button Classes="tab"
-                                Content="Insights"
-                                Command="{Binding SelectInsightsCommand}"
-                                Classes.active="{Binding IsInsightsSelected}" />
-                    </StackPanel>
+                    <Border x:Name="TabSegmentGroup" VerticalAlignment="Center">
+                        <Panel>
+                            <Border x:Name="TabThumb"
+                                    Classes="tab-thumb"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    IsHitTestVisible="False" />
+                            <StackPanel Orientation="Horizontal" Spacing="0">
+                                <Button x:Name="DayTabButton"
+                                        Classes="tab"
+                                        Content="Day"
+                                        Command="{Binding SelectDayCommand}"
+                                        Classes.active="{Binding IsDaySelected}" />
+                                <Button x:Name="InsightsTabButton"
+                                        Classes="tab"
+                                        Content="Insights"
+                                        Command="{Binding SelectInsightsCommand}"
+                                        Classes.active="{Binding IsInsightsSelected}" />
+                            </StackPanel>
+                        </Panel>
+                    </Border>
 
                     <StackPanel Orientation="Horizontal"
                                 Spacing="6"
