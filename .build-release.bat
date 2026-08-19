@@ -51,7 +51,7 @@ copy /y "LICENSE" "%STAGE%\LICENSE" >nul
 if errorlevel 1 exit /b 1
 if exist "%ARTIFACTS%\%ZIPNAME%.zip" del /f /q "%ARTIFACTS%\%ZIPNAME%.zip"
 pushd "%STAGE%"
-tar.exe -a -c -f "..\%ZIPNAME%.zip" Daylane.exe config.ini LICENSE
+"%SystemRoot%\System32\tar.exe" -a -c -f "..\%ZIPNAME%.zip" Daylane.exe config.ini LICENSE
 set "ZIPERR=%ERRORLEVEL%"
 popd
 rmdir /s /q "%STAGE%"
