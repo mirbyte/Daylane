@@ -27,6 +27,12 @@ public partial class MainWindow : Window
     private double _tabThumbX = double.NaN;
     private double _tabThumbW;
     private double _tabThumbH;
+    private double _zoomTarget;
+    private double _zoomDisplay;
+    private double _zoomLayout;
+    private double _zoomPointerX;
+    private bool _zoomAnimating;
+    private TimeSpan _zoomLastTime;
 
     public MainWindow()
     {
@@ -69,6 +75,7 @@ public partial class MainWindow : Window
             }
             else
             {
+                StopTimelineZoomAnimation(commit: true);
                 DetachLayoutRetry();
             }
         }
@@ -76,6 +83,7 @@ public partial class MainWindow : Window
 
     internal void ScrollTimelineToNow()
     {
+        StopTimelineZoomAnimation(commit: false);
         _userAdjustedTimeline = false;
         RequestDefaultTimelineView();
     }
@@ -207,7 +215,19 @@ public partial class MainWindow : Window
             return;
         }
 
-        ZoomTimelineAtPointer(delta > 0 ? 0.25 : -0.25, e.GetPosition(TimelineScroll).X);
+        // Mouse notches are ~1; trackpads send fractions. Cap so a single event cannot jump the full range.
+        delta = Math.Clamp(delta, -2, 2);
+        if (!_zoomAnimating)
+        {
+            _zoomLayout = _boundVm.TimelineZoom;
+            _zoomDisplay = _zoomLayout;
+            _zoomTarget = _zoomLayout;
+        }
+
+        _zoomTarget = Math.Clamp(_zoomTarget * Math.Pow(1.125, delta), 1, 8);
+        _zoomPointerX = e.GetPosition(TimelineScroll).X;
+        MarkTimelineUserAdjusted();
+        StartTimelineZoomAnimation();
         e.Handled = true;
     }
 
@@ -248,6 +268,9 @@ public partial class MainWindow : Window
             }
 
             _panning = true;
+            StopTimelineZoomAnimation(commit: true);
+            _panPointerStart = pos;
+            _panOffsetStart = TimelineScroll.Offset;
             MarkTimelineUserAdjusted();
             e.Pointer.Capture(TimelineZoomSurface);
         }
@@ -288,33 +311,84 @@ public partial class MainWindow : Window
         _panArmed = false;
     }
 
-    private void ZoomTimelineAtPointer(double zoomDelta, double pointerX)
+    private void StartTimelineZoomAnimation()
+    {
+        if (_zoomAnimating)
+        {
+            return;
+        }
+
+        _zoomAnimating = true;
+        _zoomLastTime = TimeSpan.Zero;
+        RequestAnimationFrame(OnTimelineZoomFrame);
+    }
+
+    private void StopTimelineZoomAnimation(bool commit)
+    {
+        _zoomAnimating = false;
+        if (commit && _boundVm is not null)
+        {
+            ApplyTimelineZoom(_zoomDisplay, _zoomPointerX);
+        }
+    }
+
+    private void OnTimelineZoomFrame(TimeSpan time)
+    {
+        if (!_zoomAnimating)
+        {
+            return;
+        }
+
+        double dt = _zoomLastTime == TimeSpan.Zero
+            ? 1.0 / 60.0
+            : Math.Clamp((time - _zoomLastTime).TotalSeconds, 0.001, 0.05);
+        _zoomLastTime = time;
+
+        // ~150ms visual settle; further wheel events only retarget, they do not jump.
+        _zoomDisplay += (_zoomTarget - _zoomDisplay) * (1 - Math.Exp(-dt / 0.07));
+        bool settled = Math.Abs(_zoomDisplay - _zoomTarget) < 0.0008;
+        if (settled)
+        {
+            _zoomDisplay = _zoomTarget;
+            _zoomAnimating = false;
+        }
+
+        ApplyTimelineZoom(_zoomDisplay, _zoomPointerX);
+        if (!settled)
+        {
+            RequestAnimationFrame(OnTimelineZoomFrame);
+        }
+    }
+
+    private void ApplyTimelineZoom(double zoom, double pointerX)
     {
         if (_boundVm is null)
         {
             return;
         }
 
-        double oldZoom = _boundVm.TimelineZoom;
+        double oldZoom = Math.Max(1, _zoomLayout > 0 ? _zoomLayout : _boundVm.TimelineZoom);
         double viewport = GetTimelineViewportWidth();
         if (viewport <= 1)
         {
-            _boundVm.TimelineZoom = oldZoom + zoomDelta;
+            _boundVm.TimelineZoom = zoom;
+            _zoomLayout = _boundVm.TimelineZoom;
+            _zoomDisplay = _zoomLayout;
+            return;
+        }
+
+        if (Math.Abs(zoom - oldZoom) < 0.000001)
+        {
+            _zoomLayout = oldZoom;
             return;
         }
 
         // Content X under the cursor, as a fraction of the full day width.
-        double oldExtent = TimelineZoomSurface.Bounds.Width > 1
-            ? TimelineZoomSurface.Bounds.Width
-            : viewport * oldZoom;
+        double oldExtent = viewport * oldZoom;
         double anchor = (TimelineScroll.Offset.X + pointerX) / oldExtent;
 
-        _boundVm.TimelineZoom = oldZoom + zoomDelta;
-        double newZoom = _boundVm.TimelineZoom;
-        if (Math.Abs(newZoom - oldZoom) < 0.001)
-        {
-            return;
-        }
+        _boundVm.TimelineZoom = zoom;
+        double newZoom = Math.Clamp(zoom, 1, 8);
 
         MarkTimelineUserAdjusted();
 
@@ -324,11 +398,10 @@ public partial class MainWindow : Window
         TimelineZoomSurface.InvalidateMeasure();
         TimelineZoomSurface.UpdateLayout();
 
-        double newExtent = TimelineZoomSurface.Bounds.Width > 1
-            ? TimelineZoomSurface.Bounds.Width
-            : viewport * newZoom;
+        double newExtent = viewport * newZoom;
         double maxOffset = Math.Max(0, newExtent - viewport);
         TimelineScroll.Offset = new Vector(Math.Clamp((anchor * newExtent) - pointerX, 0, maxOffset), 0);
+        _zoomLayout = newZoom;
     }
 
     private void OnTimelineScrollSizeChanged(object? sender, SizeChangedEventArgs e)

@@ -177,8 +177,8 @@ internal sealed class MainWindowViewModel : INotifyPropertyChanged
         get => _timelineZoom;
         set
         {
-            double zoom = Math.Clamp(Math.Round(value * 4) / 4, 1, 8);
-            if (Math.Abs(_timelineZoom - zoom) < 0.001)
+            double zoom = Math.Clamp(value, 1, 8);
+            if (Math.Abs(_timelineZoom - zoom) < 0.000001)
             {
                 return;
             }
