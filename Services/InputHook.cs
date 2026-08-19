@@ -5,34 +5,54 @@ using Daylane.Models;
 namespace Daylane.Services;
 
 /// <summary>
-/// Low-level input hooks on a dedicated thread with its own message pump.
-/// LL hooks are invoked on the installing thread; keeping them off the UI thread
-/// avoids system-wide mouse stutter when Avalonia is busy.
+/// Keyboard LL hook plus mouse Raw Input on a dedicated thread with its own message pump.
+/// Mouse uses Raw Input (RIDEV_INPUTSINK) so click counts do not sit in the global LL hook chain.
+/// The hook thread is time-critical and the process opts out of execution-speed throttling
+/// so Win11 EcoQoS cannot delay input capture while the app is in the tray.
 /// </summary>
 internal sealed class InputHook : IDisposable
 {
     private const int WhKeyboardLl = 13;
-    private const int WhMouseLl = 14;
     private const uint WmQuit = 0x0012;
+    private const uint WmInput = 0x00FF;
 
     private const int WmKeydown = 0x0100;
     private const int WmKeyup = 0x0101;
     private const int WmSyskeydown = 0x0104;
     private const int WmSyskeyup = 0x0105;
-    private const int WmLbuttondown = 0x0201;
-    private const int WmRbuttondown = 0x0204;
-    private const int WmMbuttondown = 0x0207;
+
+    private const uint RidevInputSink = 0x00000100;
+    private const uint RidevRemove = 0x00000001;
+    private const uint RidInput = 0x10000003;
+    private const uint RimTypeMouse = 0;
+    private const ushort HidUsagePageGeneric = 0x01;
+    private const ushort HidUsageGenericMouse = 0x02;
+    private const ushort RiMouseLeftButtonDown = 0x0001;
+    private const ushort RiMouseRightButtonDown = 0x0004;
+    private const ushort RiMouseMiddleButtonDown = 0x0010;
+
+    private const int ErrorClassAlreadyExists = 1410;
+    private const int ThreadPriorityTimeCritical = 15;
+    private const int ProcessPowerThrottling = 4;
+    private const uint ProcessPowerThrottlingCurrentVersion = 1;
+    private const uint ProcessPowerThrottlingExecutionSpeed = 0x1;
+    private static readonly IntPtr HwndMessage = new(-3);
+
+    private const string RawInputClassName = "Daylane.RawInput";
 
     private readonly Action<InputEvent> _onInput;
     private readonly HashSet<uint> _keysDown = new();
     private readonly LowLevelProc _keyboardProc;
-    private readonly LowLevelProc _mouseProc;
+    private readonly WndProc _wndProc;
     private readonly ManualResetEventSlim _ready = new(false);
 
     private Thread? _thread;
     private uint _threadId;
     private IntPtr _keyboardHookId = IntPtr.Zero;
-    private IntPtr _mouseHookId = IntPtr.Zero;
+    private IntPtr _rawInputHwnd = IntPtr.Zero;
+    private IntPtr _rawInputBuffer = IntPtr.Zero;
+    private uint _rawInputBufferSize;
+    private bool _mouseRawInputRegistered;
     private Exception? _installError;
     private bool _disposed;
 
@@ -41,7 +61,7 @@ internal sealed class InputHook : IDisposable
         _onInput = onInput;
         // Keep delegates rooted for the lifetime of the hook.
         _keyboardProc = KeyboardCallback;
-        _mouseProc = MouseCallback;
+        _wndProc = RawInputWndProc;
     }
 
     public void Install()
@@ -65,7 +85,7 @@ internal sealed class InputHook : IDisposable
         {
             _thread.Join(2000);
             _thread = null;
-            throw new InvalidOperationException("Failed to install one or more input hooks.", _installError);
+            throw new InvalidOperationException("Failed to install input capture.", _installError);
         }
     }
 
@@ -91,24 +111,71 @@ internal sealed class InputHook : IDisposable
     private void HookThreadMain()
     {
         _threadId = GetCurrentThreadId();
+        TryDisableExecutionSpeedThrottling();
+        SetThreadPriority(GetCurrentThread(), ThreadPriorityTimeCritical);
 
         try
         {
+            _rawInputBufferSize = 256;
+            _rawInputBuffer = Marshal.AllocHGlobal((int)_rawInputBufferSize);
+
             using Process currentProcess = Process.GetProcessById(Environment.ProcessId);
             using ProcessModule? mainModule = currentProcess.MainModule;
             IntPtr hModule = GetModuleHandle(mainModule?.ModuleName);
 
-            _keyboardHookId = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, hModule, 0);
-            _mouseHookId = SetWindowsHookEx(WhMouseLl, _mouseProc, hModule, 0);
-
-            if (_keyboardHookId == IntPtr.Zero || _mouseHookId == IntPtr.Zero)
+            var wndClass = new WNDCLASS
             {
-                UninstallHooks();
+                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
+                hInstance = hModule,
+                lpszClassName = RawInputClassName
+            };
+            if (RegisterClass(ref wndClass) == 0
+                && Marshal.GetLastWin32Error() != ErrorClassAlreadyExists)
+            {
+                throw new InvalidOperationException("RegisterClass returned null.");
+            }
+
+            _rawInputHwnd = CreateWindowEx(
+                0,
+                RawInputClassName,
+                null,
+                0,
+                0,
+                0,
+                0,
+                0,
+                HwndMessage,
+                IntPtr.Zero,
+                hModule,
+                IntPtr.Zero);
+            if (_rawInputHwnd == IntPtr.Zero)
+            {
+                throw new InvalidOperationException("CreateWindowEx returned null.");
+            }
+
+            var mouseDevice = new RAWINPUTDEVICE
+            {
+                usUsagePage = HidUsagePageGeneric,
+                usUsage = HidUsageGenericMouse,
+                dwFlags = RidevInputSink,
+                hwndTarget = _rawInputHwnd
+            };
+            if (!RegisterRawInputDevices(ref mouseDevice, 1, (uint)Marshal.SizeOf<RAWINPUTDEVICE>()))
+            {
+                throw new InvalidOperationException("RegisterRawInputDevices failed.");
+            }
+
+            _mouseRawInputRegistered = true;
+
+            _keyboardHookId = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, hModule, 0);
+            if (_keyboardHookId == IntPtr.Zero)
+            {
                 throw new InvalidOperationException("SetWindowsHookEx returned null.");
             }
         }
         catch (Exception ex)
         {
+            UninstallCapture();
             _installError = ex;
             _ready.Set();
             return;
@@ -122,10 +189,10 @@ internal sealed class InputHook : IDisposable
             DispatchMessage(ref msg);
         }
 
-        UninstallHooks();
+        UninstallCapture();
     }
 
-    private void UninstallHooks()
+    private void UninstallCapture()
     {
         if (_keyboardHookId != IntPtr.Zero)
         {
@@ -133,10 +200,29 @@ internal sealed class InputHook : IDisposable
             _keyboardHookId = IntPtr.Zero;
         }
 
-        if (_mouseHookId != IntPtr.Zero)
+        if (_mouseRawInputRegistered)
         {
-            UnhookWindowsHookEx(_mouseHookId);
-            _mouseHookId = IntPtr.Zero;
+            var mouseDevice = new RAWINPUTDEVICE
+            {
+                usUsagePage = HidUsagePageGeneric,
+                usUsage = HidUsageGenericMouse,
+                dwFlags = RidevRemove,
+                hwndTarget = IntPtr.Zero
+            };
+            RegisterRawInputDevices(ref mouseDevice, 1, (uint)Marshal.SizeOf<RAWINPUTDEVICE>());
+            _mouseRawInputRegistered = false;
+        }
+
+        if (_rawInputHwnd != IntPtr.Zero)
+        {
+            DestroyWindow(_rawInputHwnd);
+            _rawInputHwnd = IntPtr.Zero;
+        }
+
+        if (_rawInputBuffer != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_rawInputBuffer);
+            _rawInputBuffer = IntPtr.Zero;
         }
 
         _keysDown.Clear();
@@ -169,22 +255,72 @@ internal sealed class InputHook : IDisposable
         return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
     }
 
-    private IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    private IntPtr RawInputWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
-        // Keep this path allocation-free and lock-free: every mouse move hits here.
-        if (nCode >= 0)
+        if (msg == WmInput)
         {
-            int msg = (int)wParam;
-            if (msg is WmLbuttondown or WmRbuttondown or WmMbuttondown)
-            {
-                _onInput(new InputEvent(DateTime.UtcNow, "Mouse", 0, 0));
-            }
+            HandleMouseRawInput(lParam);
+            return IntPtr.Zero;
         }
 
-        return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+        return DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void HandleMouseRawInput(IntPtr hRawInput)
+    {
+        uint size = _rawInputBufferSize;
+        uint copied = GetRawInputData(
+            hRawInput,
+            RidInput,
+            _rawInputBuffer,
+            ref size,
+            (uint)Marshal.SizeOf<RAWINPUTHEADER>());
+        if (copied == uint.MaxValue || _rawInputBuffer == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var raw = Marshal.PtrToStructure<RAWINPUT>(_rawInputBuffer);
+        if (raw.header.dwType != RimTypeMouse)
+        {
+            return;
+        }
+
+        ushort flags = raw.mouse.usButtonFlags;
+        if ((flags & RiMouseLeftButtonDown) != 0)
+        {
+            _onInput(new InputEvent(DateTime.UtcNow, "Mouse", 0, 0));
+        }
+
+        if ((flags & RiMouseRightButtonDown) != 0)
+        {
+            _onInput(new InputEvent(DateTime.UtcNow, "Mouse", 0, 0));
+        }
+
+        if ((flags & RiMouseMiddleButtonDown) != 0)
+        {
+            _onInput(new InputEvent(DateTime.UtcNow, "Mouse", 0, 0));
+        }
+    }
+
+    private static void TryDisableExecutionSpeedThrottling()
+    {
+        var state = new PROCESS_POWER_THROTTLING_STATE
+        {
+            Version = ProcessPowerThrottlingCurrentVersion,
+            ControlMask = ProcessPowerThrottlingExecutionSpeed,
+            StateMask = 0
+        };
+        SetProcessInformation(
+            GetCurrentProcess(),
+            ProcessPowerThrottling,
+            in state,
+            (uint)Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>());
     }
 
     private delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId);
@@ -209,8 +345,66 @@ internal sealed class InputHook : IDisposable
     [DllImport("user32.dll")]
     private static extern IntPtr DispatchMessage(ref MSG lpMsg);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern ushort RegisterClass(ref WNDCLASS lpWndClass);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CreateWindowEx(
+        int dwExStyle,
+        string lpClassName,
+        string? lpWindowName,
+        int dwStyle,
+        int x,
+        int y,
+        int nWidth,
+        int nHeight,
+        IntPtr hWndParent,
+        IntPtr hMenu,
+        IntPtr hInstance,
+        IntPtr lpParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DestroyWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr DefWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RegisterRawInputDevices(
+        ref RAWINPUTDEVICE pRawInputDevices,
+        uint uiNumDevices,
+        uint cbSize);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetRawInputData(
+        IntPtr hRawInput,
+        uint uiCommand,
+        IntPtr pData,
+        ref uint pcbSize,
+        uint cbSizeHeader);
+
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentThread();
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetThreadPriority(IntPtr hThread, int nPriority);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetProcessInformation(
+        IntPtr hProcess,
+        int processInformationClass,
+        in PROCESS_POWER_THROTTLING_STATE processInformation,
+        uint processInformationSize);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
@@ -225,5 +419,66 @@ internal sealed class InputHook : IDisposable
         public uint time;
         public int ptX;
         public int ptY;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct WNDCLASS
+    {
+        public uint style;
+        public IntPtr lpfnWndProc;
+        public int cbClsExtra;
+        public int cbWndExtra;
+        public IntPtr hInstance;
+        public IntPtr hIcon;
+        public IntPtr hCursor;
+        public IntPtr hbrBackground;
+        public string? lpszMenuName;
+        public string lpszClassName;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RAWINPUTDEVICE
+    {
+        public ushort usUsagePage;
+        public ushort usUsage;
+        public uint dwFlags;
+        public IntPtr hwndTarget;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RAWINPUTHEADER
+    {
+        public uint dwType;
+        public uint dwSize;
+        public IntPtr hDevice;
+        public IntPtr wParam;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct RAWMOUSE
+    {
+        [FieldOffset(0)] public ushort usFlags;
+        [FieldOffset(4)] public uint ulButtons;
+        [FieldOffset(4)] public ushort usButtonFlags;
+        [FieldOffset(6)] public ushort usButtonData;
+        [FieldOffset(8)] public uint ulRawButtons;
+        [FieldOffset(12)] public int lLastX;
+        [FieldOffset(16)] public int lLastY;
+        [FieldOffset(20)] public uint ulExtraInformation;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RAWINPUT
+    {
+        public RAWINPUTHEADER header;
+        public RAWMOUSE mouse;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROCESS_POWER_THROTTLING_STATE
+    {
+        public uint Version;
+        public uint ControlMask;
+        public uint StateMask;
     }
 }
